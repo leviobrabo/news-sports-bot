@@ -1,0 +1,9 @@
+pyTelegramBotAPI==4.11.0
+bs4==0.0.1
+requests==2.26.0
+schedule==1.2.1
+pymongo==4.5.0
+configparser==6.0.0
+loguru==0.7.0
+psutil==5.9.6
+telegraph==2.2.0
