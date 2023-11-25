@@ -384,13 +384,20 @@ def check_news_and_send():
                     # URL da imagem
                     image = card.find('img')['src']
                     
-                    # Enviar a foto e os detalhes da notícia para o grupo
-                    bot.send_photo(CHANNEL, photo=image, caption=f"Título: {title}\nData: {date}\nLink: {link}")
+                    # Criando o botão com o link desejado
+                    button_text = f"https://www.lance.com.br/+link"  # Texto do botão
+                    markup = types.InlineKeyboardMarkup()
+                    btn_news = types.InlineKeyboardButton(text='Ver notícia completa', url=link)
+                    markup.add(btn_news)
+                    
+                    # Enviar a foto e os detalhes da notícia para o grupo com o botão
+                    bot.send_photo(CHANNEL, photo=image, caption=f"<b>{title}</b>\n\n<code>{date}</code>", reply_markup=markup)
                     sleep(100)
         else:
             print("Não foram encontradas notícias.")
     else:
         print("Falha ao obter a página")
+
 # Configurando o schedule para verificar a cada 15 minutos
 schedule.every(15).minutes.do(check_news_and_send)
 
