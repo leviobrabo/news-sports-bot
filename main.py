@@ -305,7 +305,7 @@ def send_table_message():
             image_bytes = create_image_with_text(message)
             logger.info("Imagem gerada com sucesso!")
 
-            bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão', timeout=60)
+            bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão', timeout=120)  # Aumentando o tempo limite para 120 segundos
             logger.info("Imagem enviada com sucesso para o canal!")
 
     except requests.exceptions.Timeout as te:
@@ -456,17 +456,17 @@ def schedule_tasks():
     schedule.every(6).hours.do(enviar_mensagem)
     schedule.every(6).hours.do(send_table_message)
     schedule.every().day.at('20:20').do(enviar_mensagem)
-    schedule.every().day.at('20:47').do(send_table_message)
+    schedule.every().day.at('20:53').do(send_table_message)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
 # Função principal do bot
 def main():
     try:
-        # Configura os agendamentos uma vez
         schedule_tasks()
 
         while True:
+            logger.info('BOT INICIADO...')
             schedule.run_pending()
             sleep(60)  # Espera um minuto antes de verificar novamente
     except KeyboardInterrupt:
