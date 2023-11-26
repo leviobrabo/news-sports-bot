@@ -308,9 +308,12 @@ def send_table_message():
             bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão', timeout=60)
             logger.info("Imagem enviada com sucesso para o canal!")
 
+    except requests.exceptions.Timeout as te:
+        logger.error(f'Timeout de conexão ao enviar a imagem: {str(te)}')
+    except requests.exceptions.RequestException as re:
+        logger.error(f'Erro ao enviar a imagem: {str(re)}')
     except Exception as e:
-        logger.error(f'Erro ao enviar a mensagem da tabela para o Telegram: {str(e)}')
-
+        logger.error(f'Erro inesperado ao enviar a imagem: {str(e)}')
 
 def enviar_mensagem():
     url = 'https://www.placardefutebol.com.br/jogos-de-hoje'
@@ -453,7 +456,7 @@ def schedule_tasks():
     schedule.every(6).hours.do(enviar_mensagem)
     schedule.every(6).hours.do(send_table_message)
     schedule.every().day.at('20:20').do(enviar_mensagem)
-    schedule.every().day.at('20:39').do(send_table_message)
+    schedule.every().day.at('20:47').do(send_table_message)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
