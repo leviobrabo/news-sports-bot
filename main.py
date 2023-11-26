@@ -229,7 +229,6 @@ def total_news():
     except Exception as e:
         logger.exception(f'Error sending total news count: {str(e)}')
 
-schedule.every().day.at('23:58').do(total_news)
 
 def delete_news():
     try:
@@ -241,7 +240,6 @@ def delete_news():
         )
 
 
-schedule.every().day.at('00:00').do(delete_news)
 
 def send_table_message():
     try:
@@ -286,7 +284,6 @@ def send_table_message():
     except Exception as e:
         logger.error(f'Erro ao enviar a mensagem da tabela para o Telegram: {str(e)}')
 
-schedule.every(6).hours.do(send_table_message)
 
 
 def enviar_mensagem():
@@ -347,7 +344,6 @@ def enviar_mensagem():
         bot.send_message(CHANNEL, mensagem)
 
 # Schedule para enviar a mensagem a cada 6 horas
-schedule.every(6).hours.do(enviar_mensagem)
 
 def check_news_and_send():
     # URL da página
@@ -399,7 +395,6 @@ def check_news_and_send():
         print("Falha ao obter a página")
 
 # Configurando o schedule para verificar a cada 15 minutos
-schedule.every(15).minutes.do(check_news_and_send)
 
 if __name__ == '__main__':
     while True:  # Loop infinito
@@ -435,5 +430,11 @@ if __name__ == '__main__':
             sleep(60)
             logger.info('Observando se há schedule')
             
+            schedule.every(15).minutes.do(check_news_and_send)
+            schedule.every(6).hours.do(enviar_mensagem)
+            schedule.every(6).hours.do(send_table_message)
+            schedule.every().day.at('00:00').do(delete_news)
+            schedule.every().day.at('23:58').do(total_news)
+
         except Exception as e:
             logger.exception(f'Erro não tratado: {str(e)}')
