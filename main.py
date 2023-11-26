@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import configparser
 from telebot.apihelper import ApiTelegramException
 import psutil
+from PIL import Image, ImageDraw, ImageFont
 
 import telebot
 from telebot import types
@@ -239,7 +240,31 @@ def delete_news():
             f'Erro ao deletar as notícias do banco de dados: {str(e)}'
         )
 
+# Função para criar a imagem com o texto
+def create_image_with_text(message_text):
+    # Carregar a imagem de background
+    background_image = Image.open('400x1090.png')
 
+    # Configurações da fonte e tamanho
+    font_path = 'impact.ttf'
+    font_size = 22
+    font = ImageFont.truetype(font_path, font_size)
+
+    # Criar um objeto ImageDraw para desenhar na imagem
+    draw = ImageDraw.Draw(background_image)
+
+    # Definir as coordenadas iniciais para o texto
+    x = 10
+    y = 10
+
+    # Escrever o texto na imagem
+    lines = message_text.split('\n')
+    for line in lines:
+        draw.text((x, y), line, fill='white', font=font)
+        y += font_size + 5  # Espaçamento entre linhas
+
+    # Salvar a imagem gerada
+    background_image.save('table_image.png')
 
 def send_table_message():
     try:
@@ -277,13 +302,14 @@ def send_table_message():
             )
             message += table_row
 
-        # Enviar mensagem para o Telegram
-        bot.send_message(CHANNEL, message, parse_mode='HTML')
-        logger.info('Mensagem da tabela enviada com sucesso para o Telegram.')
+            image_bytes = create_image_with_text(message)
+            logger.info("Imagem gerada com sucesso!")
+
+            bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão')
+            logger.info("Imagem enviada com sucesso para o canal!")
 
     except Exception as e:
         logger.error(f'Erro ao enviar a mensagem da tabela para o Telegram: {str(e)}')
-
 
 
 def enviar_mensagem():
@@ -371,7 +397,7 @@ def check_news_and_send():
                 
                 # Verificando se o título da notícia já está no banco de dados
                 if db.search_title(title):
-                    print(f"A notícia '{title}' já foi postada.")
+                    logger.info(f"A notícia '{title}' já foi postada.")
                 else:
                     current_datetime = datetime.now() - timedelta(hours=3)
                     date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
@@ -390,9 +416,9 @@ def check_news_and_send():
                     bot.send_photo(CHANNEL, photo=image, caption=f"<b>{title}</b>\n\n<code>{date}</code>", reply_markup=markup)
                     sleep(100)
         else:
-            print("Não foram encontradas notícias.")
+            logger.info("Não foram encontradas notícias.")
     else:
-        print("Falha ao obter a página")
+        logger.info("Falha ao obter a página")
 
 def send_news_g1():
     try:
@@ -427,7 +453,7 @@ def schedule_tasks():
     schedule.every(6).hours.do(enviar_mensagem)
     schedule.every(6).hours.do(send_table_message)
     schedule.every().day.at('20:20').do(enviar_mensagem)
-    schedule.every().day.at('20:15').do(send_table_message)
+    schedule.every().day.at('20:37').do(send_table_message)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 

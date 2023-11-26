@@ -37,8 +37,9 @@ def send_table_message():
             f"<b>Derrotas:</b> {derrotas}\n"
             f"<b>Saldo de Gols:</b> {saldo_gols}\n\n"
         )
-        message += "━━━━━━━━━━━━━━━━━━"
         message += table_row
+
+        print(message)
 
     # Enviar mensagem para o Telegram
     chat_id = bot.CHANNEL
