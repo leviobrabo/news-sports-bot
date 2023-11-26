@@ -242,29 +242,31 @@ def delete_news():
 
 # Função para criar a imagem com o texto
 def create_image_with_text(message_text):
-    # Carregar a imagem de background
     background_image = Image.open('400x1090.png')
 
-    # Configurações da fonte e tamanho
     font_path = 'impact.ttf'
     font_size = 22
     font = ImageFont.truetype(font_path, font_size)
 
-    # Criar um objeto ImageDraw para desenhar na imagem
     draw = ImageDraw.Draw(background_image)
 
-    # Definir as coordenadas iniciais para o texto
     x = 10
     y = 10
 
-    # Escrever o texto na imagem
     lines = message_text.split('\n')
     for line in lines:
         draw.text((x, y), line, fill='white', font=font)
-        y += font_size + 5  # Espaçamento entre linhas
+        y += font_size + 5  
 
-    # Salvar a imagem gerada
     background_image.save('table_image.png')
+
+def send_image_to_telegram(image_bytes):
+    try:
+        bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão')
+        logger.info("Imagem enviada com sucesso para o canal!")
+    except Exception as e:
+        logger.error(f'Erro ao enviar a imagem para o Telegram: {str(e)}')
+
 
 def send_table_message():
     try:
@@ -305,15 +307,16 @@ def send_table_message():
             image_bytes = create_image_with_text(message)
             logger.info("Imagem gerada com sucesso!")
 
-            bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão', timeout=120)  # Aumentando o tempo limite para 120 segundos
-            logger.info("Imagem enviada com sucesso para o canal!")
+            with open('table_image.png', 'wb') as file:
+                file.write(image_bytes.getvalue())
+                logger.info("Imagem salva localmente com sucesso!")
 
-    except requests.exceptions.Timeout as te:
-        logger.error(f'Timeout de conexão ao enviar a imagem: {str(te)}')
-    except requests.exceptions.RequestException as re:
-        logger.error(f'Erro ao enviar a imagem: {str(re)}')
+        # Enviar a imagem para o Telegram separadamente
+            send_image_to_telegram(image_bytes)
+
     except Exception as e:
         logger.error(f'Erro inesperado ao enviar a imagem: {str(e)}')
+
 
 def enviar_mensagem():
     url = 'https://www.placardefutebol.com.br/jogos-de-hoje'
@@ -456,7 +459,7 @@ def schedule_tasks():
     schedule.every(6).hours.do(enviar_mensagem)
     schedule.every(6).hours.do(send_table_message)
     schedule.every().day.at('20:20').do(enviar_mensagem)
-    schedule.every().day.at('20:53').do(send_table_message)
+    schedule.every().day.at('20:59').do(send_table_message)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
@@ -466,9 +469,8 @@ def main():
         schedule_tasks()
 
         while True:
-            logger.info('BOT INICIADO...')
             schedule.run_pending()
-            sleep(60)  # Espera um minuto antes de verificar novamente
+            sleep(5)  # Espera um minuto antes de verificar novamente
     except KeyboardInterrupt:
         logger.info('Encerrando o bot devido ao comando de interrupção (Ctrl+C)')
     except Exception as e:
@@ -476,6 +478,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+    logger.info('BOT INICIADO...')
 
 
 
