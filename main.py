@@ -305,7 +305,7 @@ def send_table_message():
             image_bytes = create_image_with_text(message)
             logger.info("Imagem gerada com sucesso!")
 
-            bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão')
+            bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão', timeout=60)
             logger.info("Imagem enviada com sucesso para o canal!")
 
     except Exception as e:
@@ -453,7 +453,7 @@ def schedule_tasks():
     schedule.every(6).hours.do(enviar_mensagem)
     schedule.every(6).hours.do(send_table_message)
     schedule.every().day.at('20:20').do(enviar_mensagem)
-    schedule.every().day.at('20:37').do(send_table_message)
+    schedule.every().day.at('20:39').do(send_table_message)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
