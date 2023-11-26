@@ -426,6 +426,8 @@ def schedule_tasks():
     schedule.every(15).minutes.do(check_news_and_send)
     schedule.every(6).hours.do(enviar_mensagem)
     schedule.every(6).hours.do(send_table_message)
+    schedule.every().day.at('20:20').do(enviar_mensagem)
+    schedule.every().day.at('20:15').do(send_table_message)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
