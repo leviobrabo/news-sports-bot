@@ -52,9 +52,7 @@ def get_news(limit=5):
         post_sections = soup.find_all('div', {'class': 'bastian-feed-item'})
 
         news_list = []
-        for section in post_sections[
-            :limit
-        ]:  # Limitando o número de notícias a serem analisadas
+        for section in post_sections[:limit]:
             logger.info('Notícia recebida')
             title_element = section.find('a', {'class': 'feed-post-link'})
             description_element = section.find(
@@ -90,9 +88,7 @@ def get_news(limit=5):
 
                 for media_section in media_content:
                     media_element = media_section.find('img')
-                    if (
-                        media_element and 'src' in media_element.attrs
-                    ):  # Verifica se 'src' está presente nos atributos
+                    if media_element and 'src' in media_element.attrs:
                         media_links.append(media_element['src'])
                         if 'src' in media_element.attrs:
                             image_url = media_element['src']
@@ -142,11 +138,12 @@ def get_news(limit=5):
         logger.exception(f'Erro ao obter notícias: {str(e)}')
         return []
 
+
 def upload_telegraph_image(image_url, attempt=0):
     logger.info('Fazendo upload da imagem no Telegraph...')
     if attempt == 3:
         return None
-    
+
     telegraph_api = telegraph.Telegraph(TELEGRAPH)
 
     try:
@@ -172,11 +169,12 @@ def create_telegraph_post(
     logger.info('Criando post no Telegraph...')
     try:
         telegraph_api = telegraph.Telegraph(TELEGRAPH)
-        
-        # Formatação do conteúdo 'full_text'
-        paragraphs = [f'<p>{paragraph}</p>' for paragraph in full_text.split('\n\n')]
+
+        paragraphs = [
+            f'<p>{paragraph}</p>' for paragraph in full_text.split('\n\n')
+        ]
         formatted_text = ''.join(paragraphs)
-        
+
         response = telegraph_api.create_page(
             f'{title}',
             html_content=(
@@ -194,12 +192,11 @@ def create_telegraph_post(
         return None, None, None
 
 
-
 def create_telegraph_posts():
     logger.info('Criando posts no Telegraph...')
     news = get_news()
     telegraph_links = []
-    
+
     for n in news:
         title = n['title']
         description = n['description']
@@ -221,11 +218,11 @@ def create_telegraph_posts():
 def total_news():
     try:
         all_news = db.get_all_news()
-        total_count = len(list(all_news))  # Calculate total count
+        total_count = len(list(all_news))
         bot.send_message(
             GROUP_LOG,
             f'TOTAL de Notícia enviada hoje: <code>{total_count}</code> Notícias',
-        )  # Send the total count
+        )
     except Exception as e:
         logger.exception(f'Error sending total news count: {str(e)}')
 
@@ -240,21 +237,19 @@ def delete_news():
         )
 
 
-
 def send_table_message():
     try:
-        # Código para obter a tabela do Brasileirão Serie A
-        response = requests.get('https://www.cnnbrasil.com.br/esportes/futebol/tabela-brasileirao-serie-a/')
+        response = requests.get(
+            'https://www.cnnbrasil.com.br/esportes/futebol/tabela-brasileirao-serie-a/'
+        )
         content = response.content
         site = BeautifulSoup(content, 'html.parser')
 
         tabela = site.find('tbody', class_='table__body')
 
-        # Encontrando todas as linhas da tabela
         linhas = tabela.find_all('tr', class_='body__row')
 
-        # Criando a mensagem formatada com a tabela
-        message = "<b>Tabela do Brasileirão ⚽️🇧🇷</b>\n\n"
+        message = '<b>Tabela do Brasileirão ⚽️🇧🇷</b>\n\n'
         for linha in linhas:
             classificacao = linha.find('span').text.strip()
             nome_time = linha.find('span', class_='hide__s').text.strip()
@@ -268,21 +263,22 @@ def send_table_message():
             saldo_gols = dados_time[7].text.strip()
 
             table_row = (
-                f"🏆 {classificacao} - <b>{nome_time}</b>\n"
-                f"Pontos: {pontos} pts\n"
-                f"Jogos: {jogos}\n"
-                f"V: {vitorias} E: {empates} D: {derrotas}\n"
-                f"Saldo de Gols: {saldo_gols}\n"
+                f'🏆 {classificacao} - <b>{nome_time}</b>\n'
+                f'Pontos: {pontos} pts\n'
+                f'Jogos: {jogos}\n'
+                f'V: {vitorias} E: {empates} D: {derrotas}\n'
+                f'Saldo de Gols: {saldo_gols}\n'
                 f"{'━━━━━━━━━━━━━━━━━━'}\n\n"
             )
             message += table_row
 
-        # Enviar mensagem para o Telegram
         bot.send_message(CHANNEL, message, parse_mode='HTML')
         logger.info('Mensagem da tabela enviada com sucesso para o Telegram.')
 
     except Exception as e:
-        logger.error(f'Erro ao enviar a mensagem da tabela para o Telegram: {str(e)}')
+        logger.error(
+            f'Erro ao enviar a mensagem da tabela para o Telegram: {str(e)}'
+        )
 
 
 def enviar_mensagem():
@@ -295,111 +291,113 @@ def enviar_mensagem():
     if response.status_code == 200:
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Encontrando todos os containers de jogos do Campeonato Brasileiro da Série A
         containers = soup.find_all('div', class_='container content')
 
         for container in containers:
-            # Verificando se o jogo é do Campeonato Brasileiro
             links_jogos = container.find_all('a', href=True)
             for link_jogo in links_jogos:
                 link = link_jogo['href']
                 if '/brasileirao-serie-a/' in link:
-                    # Encontrando o status do jogo
-                    status = link_jogo.find('span', class_='status-name').text.strip()
+                    status = link_jogo.find(
+                        'span', class_='status-name'
+                    ).text.strip()
 
-                    # Encontrando os nomes dos times da casa e visitante
-                    team_home = link_jogo.find_all('h5', class_='team_link')[0].text.strip()
-                    team_away = link_jogo.find_all('h5', class_='team_link')[1].text.strip()
+                    team_home = link_jogo.find_all('h5', class_='team_link')[
+                        0
+                    ].text.strip()
+                    team_away = link_jogo.find_all('h5', class_='team_link')[
+                        1
+                    ].text.strip()
 
-                    # Extraindo o status do jogo (se está em andamento ou encerrado)
                     if 'Encerrado' in status:
-                        score_home = container.find_all('div', class_='match-score')[0].text.strip()
-                        score_away = container.find_all('div', class_='match-score')[1].text.strip()
+                        score_home = container.find_all(
+                            'div', class_='match-score'
+                        )[0].text.strip()
+                        score_away = container.find_all(
+                            'div', class_='match-score'
+                        )[1].text.strip()
                         jogo = {
                             'Time da Casa': team_home,
                             'Placar Casa': score_home,
                             'Placar Visitante': score_away,
                             'Time Visitante': team_away,
-                            'Status': status
+                            'Status': status,
                         }
                     else:
                         jogo = {
                             'Time da Casa': team_home,
                             'Time Visitante': team_away,
-                            'Status': status
+                            'Status': status,
                         }
 
                     jogos_campeonato_brasileiro.append(jogo)
 
-        # Construindo a mensagem a ser enviada
-        mensagem = "<b>Jogos do Campeonato Brasileiro da Série A:</b>\n\n"
+        mensagem = '<b>Jogos do Campeonato Brasileiro da Série A:</b>\n\n'
         for jogo in jogos_campeonato_brasileiro:
             if 'Placar Casa' in jogo:
                 mensagem += f"{jogo['Time da Casa']} {jogo['Placar Casa']} - {jogo['Placar Visitante']} {jogo['Time Visitante']} ({jogo['Status']})\n"
             else:
                 mensagem += f"{jogo['Time da Casa']} x {jogo['Time Visitante']} ({jogo['Status']})\n"
 
-        # Enviando a mensagem para o canal
         bot.send_message(CHANNEL, mensagem)
 
-# Schedule para enviar a mensagem a cada 6 horas
 
 def check_news_and_send():
-    # URL da página
     url = 'https://www.lance.com.br/mais-noticias.html'
 
-    # Fazendo a requisição HTTP
     response = requests.get(url)
 
     if response.status_code == 200:
-        # Parseando o HTML
         soup = BeautifulSoup(response.content, 'html.parser')
-        
-        # Encontrando todos os cards de notícias
+
         cards = soup.find_all('div', class_='styles_card__XBZhk')
-        
-        # Verificando se existem notícias
+
         if len(cards) > 0:
-            # Enviando cada notícia para o grupo
             for card in cards:
-                # Título da notícia
                 title = card.find('h3').text.strip()
-                
-                # URL da notícia
+
                 link = card.find('a')['href']
-                
-                # Verificando se o título da notícia já está no banco de dados
+
                 if db.search_title(title):
                     logger.info(f"A notícia '{title}' já foi postada.")
                 else:
                     current_datetime = datetime.now() - timedelta(hours=3)
                     date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
                     db.add_news(title, date)
-                    
+
                     # URL da imagem
                     image = card.find('img')['src']
-                    
-                    # Criando o botão com o link desejado
-                    button_text = f"https://www.lance.com.br{link}"  # Texto do botão
+
+                    button_text = (
+                        f'https://www.lance.com.br{link}'  # Texto do botão
+                    )
                     markup = types.InlineKeyboardMarkup()
-                    btn_news = types.InlineKeyboardButton(text='Ver notícia completa', url=button_text)
+                    btn_news = types.InlineKeyboardButton(
+                        text='Ver notícia completa', url=button_text
+                    )
                     markup.add(btn_news)
-                    
-                    bot.send_photo(CHANNEL, photo=image, caption=f"<b>{title}</b>\n\n<code>{date}</code>", reply_markup=markup)
+
+                    bot.send_photo(
+                        CHANNEL,
+                        photo=image,
+                        caption=f'<b>{title}</b>\n\n<code>{date}</code>',
+                        reply_markup=markup,
+                    )
                     sleep(100)
         else:
-            logger.info("Não foram encontradas notícias.")
+            logger.info('Não foram encontradas notícias.')
     else:
-        logger.info("Falha ao obter a página")
+        logger.info('Falha ao obter a página')
+
 
 def send_news_g1():
     try:
         logger.info('Iniciando verificação e envio de notícias...')
         created_links = create_telegraph_posts()
-        
+
         for telegraph_link, title, original_link in created_links:
             news_name = db.search_title(title)
-            
+
             if news_name:
                 logger.info('A notícia já foi postada.')
             else:
@@ -407,17 +405,20 @@ def send_news_g1():
                 current_datetime = datetime.now() - timedelta(hours=3)
                 date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
                 db.add_news(title, date)
-                
+
                 logger.info('Enviando notícia...')
                 bot.send_message(
                     CHANNEL,
                     f'<a href="{telegraph_link}">󠀠</a><b>{title}</b>\n\n'
                     f'🗞 <a href="{original_link}">G1 SPORTS</a>',
-                    parse_mode='HTML'
+                    parse_mode='HTML',
                 )
                 sleep(300)
     except Exception as e:
-        logger.exception(f'Erro durante verificação e envio de notícias: {str(e)}')
+        logger.exception(
+            f'Erro durante verificação e envio de notícias: {str(e)}'
+        )
+
 
 def scrape_website(url):
     try:
@@ -425,265 +426,330 @@ def scrape_website(url):
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
 
-            articles = soup.find_all('div', class_='styles_card__XBZhk')  # Altere essa classe de acordo com a estrutura do site
+            articles = soup.find_all(
+                'div', class_='styles_card__XBZhk'
+            )  # Altere essa classe de acordo com a estrutura do site
 
             for article in articles:
                 title = article.find('h3').text.strip()
                 image_url = article.find('img')['src']
-                date = article.find('div', class_='styles_date__lZuoR').text.strip()
+                date = article.find(
+                    'div', class_='styles_date__lZuoR'
+                ).text.strip()
 
-                # Verifica se o elemento do autor existe antes de tentar acessá-lo
-                author_elem = article.find('span', style='color: var(--green-lance);')
-                author = author_elem.text.strip() if author_elem else 'Autor não encontrado'
+                author_elem = article.find(
+                    'span', style='color: var(--green-lance);'
+                )
+                author = (
+                    author_elem.text.strip()
+                    if author_elem
+                    else 'Autor não encontrado'
+                )
 
                 link_elem = article.find('a')
-                link = 'https://www.lance.com.br' + link_elem['href'] if link_elem else 'Link não encontrado'
+                link = (
+                    'https://www.lance.com.br' + link_elem['href']
+                    if link_elem
+                    else 'Link não encontrado'
+                )
 
-                # Aqui você pode enviar os dados para o bot ou realizar alguma outra ação
                 send_to_bot(title, image_url, date, author, link)
 
     except requests.RequestException as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
+
 
 def send_to_bot(title, image_url, date, author, link):
     try:
         if db.search_title(title):
-                    logger.info(f"A notícia '{title}' já foi postada.")
+            logger.info(f"A notícia '{title}' já foi postada.")
         else:
             current_datetime = datetime.now() - timedelta(hours=3)
             date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
             db.add_news(title, date)
 
-        button_text = f"https://www.lance.com.br{link}"  # Texto do botão
+        button_text = f'https://www.lance.com.br{link}'  # Texto do botão
         markup = types.InlineKeyboardMarkup()
-        btn_news = types.InlineKeyboardButton(text='Ver notícia completa', url=button_text)
+        btn_news = types.InlineKeyboardButton(
+            text='Ver notícia completa', url=button_text
+        )
         markup.add(btn_news)
-        
-        bot.send_photo(CHANNEL, photo=image_url, caption=f"<b>{title}</b>\n\n<code>{date}</code> - Feito por: {author}", reply_markup=markup)
+
+        bot.send_photo(
+            CHANNEL,
+            photo=image_url,
+            caption=f'<b>{title}</b>\n\n<code>{date}</code> - Feito por: {author}',
+            reply_markup=markup,
+        )
         sleep(100)
     except Exception as e:
-        logger.info(f"Request Exception: {e}")
-                
+        logger.info(f'Request Exception: {e}')
 
-# Chame a função scrape_website com a URL do site desejado
+
 scrape_website('https://www.lance.com.br/futebol-nacional/mais-noticias.html')
 
 
 def artilheiro_py():
     try:
 
-        url = "https://www.lance.com.br/tabela/brasileirao"
+        url = 'https://www.lance.com.br/tabela/brasileirao'
 
-        # Fazendo uma requisição GET para obter o conteúdo HTML da página
         response = requests.get(url)
 
-        # Verifica se a requisição foi bem-sucedida
         if response.status_code == 200:
-            # Parsing do conteúdo HTML
-            soup = BeautifulSoup(response.text, "html.parser")
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Encontrando todos os elementos com a classe 'styles_infoItem__oVN6c' que contêm informações dos artilheiros
-            artilheiros = soup.find_all(class_="styles_infoItem__oVN6c")[:10]
+            artilheiros = soup.find_all(class_='styles_infoItem__oVN6c')[:10]
 
-            # Iterando pelos artilheiros e extraindo as informações desejadas
             for artilheiro in artilheiros:
-                posicao = artilheiro.find(class_="styles_infoPos__hzOKU").text.strip()
+                posicao = artilheiro.find(
+                    class_='styles_infoPos__hzOKU'
+                ).text.strip()
                 nome_time = artilheiro.find(title=True)['title']
-                nome_jogador = artilheiro.find(class_="styles_playerName__iZPeZ").text.strip()
-                posicao_jogador = artilheiro.find(class_="styles_playerPosition__T9BX1").text.strip()
-                jogos = artilheiro.find_all("span")[0].text.strip()
-                media = artilheiro.find_all("span")[1].text.strip()
-                gols = artilheiro.find("p").text.strip()
+                nome_jogador = artilheiro.find(
+                    class_='styles_playerName__iZPeZ'
+                ).text.strip()
+                posicao_jogador = artilheiro.find(
+                    class_='styles_playerPosition__T9BX1'
+                ).text.strip()
+                jogos = artilheiro.find_all('span')[0].text.strip()
+                media = artilheiro.find_all('span')[1].text.strip()
+                gols = artilheiro.find('p').text.strip()
 
-                send_artilheiro(posicao, nome_time, nome_jogador, posicao_jogador, jogos, media, gols)
+                send_artilheiro(
+                    posicao,
+                    nome_time,
+                    nome_jogador,
+                    posicao_jogador,
+                    jogos,
+                    media,
+                    gols,
+                )
         else:
-            logger.info("Falha ao obter a página")
+            logger.info('Falha ao obter a página')
     except requests.RequestException as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
 
-def send_artilheiro(posicao, nome_time, nome_jogador, posicao_jogador, jogos, media, gols):
+
+def send_artilheiro(
+    posicao, nome_time, nome_jogador, posicao_jogador, jogos, media, gols
+):
     try:
-        message = "<b>Artilheiros do Brasileirão</b>\n\n"
-        message += f"<b>Posição:</b> {posicao}\n"
-        message += f"<b>Time:</b> {nome_time}\n"
-        message += f"<b>Jogador:</b> {nome_jogador}\n"
-        message += f"<b>Posição:</b> {posicao_jogador}\n"
-        message += f"<b>Jogos:</b> {jogos}\n"
-        message += f"<b>Média:</b> {media}\n"
-        message += f"<b>Gols:</b> {gols}\n"
-        message += "-" * 30 + "\n"
-                
+        message = '<b>Artilheiros do Brasileirão</b>\n\n'
+        message += f'<b>Posição:</b> {posicao}\n'
+        message += f'<b>Time:</b> {nome_time}\n'
+        message += f'<b>Jogador:</b> {nome_jogador}\n'
+        message += f'<b>Posição:</b> {posicao_jogador}\n'
+        message += f'<b>Jogos:</b> {jogos}\n'
+        message += f'<b>Média:</b> {media}\n'
+        message += f'<b>Gols:</b> {gols}\n'
+        message += '-' * 30 + '\n'
+
         bot.send_message(CHANNEL, message)
         sleep(100)
     except Exception as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
+
 
 import requests
 from bs4 import BeautifulSoup
 
+
 def assitencia():
     try:
-        url = "https://www.lance.com.br/tabela/brasileirao"
+        url = 'https://www.lance.com.br/tabela/brasileirao'
         response = requests.get(url)
 
-        # Verificando se a requisição foi bem-sucedida (código 200)
         if response.status_code == 200:
-            # Parseando o conteúdo HTML
-            soup = BeautifulSoup(response.content, "html.parser")
+            soup = BeautifulSoup(response.content, 'html.parser')
 
-            # Encontrando todas as divs que contêm as informações dos jogadores
-            info_items = soup.find_all("div", class_="styles_infoItem__oVN6c")[:10]
+            info_items = soup.find_all('div', class_='styles_infoItem__oVN6c')[
+                :10
+            ]
 
-            # Iterando sobre cada div para extrair os dados
             for item in info_items:
-                ranking = item.find("div", class_="styles_infoPos__hzOKU").text.strip()
-                team_name = item.find("img")["title"]
-                player_name = item.find("span", class_="styles_playerName__iZPeZ").text
-                position = item.find("span", class_="styles_playerPosition__T9BX1").text
-                games = item.find_all("span")[0].text
-                average = item.find_all("span")[1].text
-                goals = item.find("p").text
+                ranking = item.find(
+                    'div', class_='styles_infoPos__hzOKU'
+                ).text.strip()
+                team_name = item.find('img')['title']
+                player_name = item.find(
+                    'span', class_='styles_playerName__iZPeZ'
+                ).text
+                position = item.find(
+                    'span', class_='styles_playerPosition__T9BX1'
+                ).text
+                games = item.find_all('span')[0].text
+                average = item.find_all('span')[1].text
+                goals = item.find('p').text
 
-                send_assitencia(ranking, team_name, player_name, position, games, average, goals)
+                send_assitencia(
+                    ranking,
+                    team_name,
+                    player_name,
+                    position,
+                    games,
+                    average,
+                    goals,
+                )
 
         else:
-            logger.info("Failed to retrieve the page.")
+            logger.info('Failed to retrieve the page.')
     except requests.RequestException as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
 
-def send_assitencia(ranking, team_name, player_name, position, games, average, goals):
+
+def send_assitencia(
+    ranking, team_name, player_name, position, games, average, goals
+):
     try:
-        message = "<b>Assistências do Brasileirão</b>\n\n"
-        message += f"<b>Posição:</b> {ranking}\n"
-        message += f"<b>Time:</b> {team_name}\n"
-        message += f"<b>Jogador:</b> {player_name}\n"
-        message += f"<b>Posição:</b> {position}\n"
-        message += f"<b>Jogos:</b> {games}\n"
-        message += f"<b>Média:</b> {average}\n"
-        message += f"<b>Assistências:</b> {goals}\n"
-        message += "-" * 30 + "\n"
-                
+        message = '<b>Assistências do Brasileirão</b>\n\n'
+        message += f'<b>Posição:</b> {ranking}\n'
+        message += f'<b>Time:</b> {team_name}\n'
+        message += f'<b>Jogador:</b> {player_name}\n'
+        message += f'<b>Posição:</b> {position}\n'
+        message += f'<b>Jogos:</b> {games}\n'
+        message += f'<b>Média:</b> {average}\n'
+        message += f'<b>Assistências:</b> {goals}\n'
+        message += '-' * 30 + '\n'
+
         bot.send_message(CHANNEL, message)
         sleep(100)
     except Exception as e:
-        logger.info(f"Request Exception: {e}")
-     
+        logger.info(f'Request Exception: {e}')
+
+
 def ultimos_jogos():
     try:
-        url = 'https://www.lance.com.br/resenha-de-apostas/mais-noticias?page=1'
+        url = (
+            'https://www.lance.com.br/resenha-de-apostas/mais-noticias?page=1'
+        )
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Encontrando todas as notícias
         all_news = soup.find_all('a', class_='')
 
-        # Listas para armazenar os dados filtrados
         brasileirao_titles = []
         brasileirao_images = []
         brasileirao_dates = []
         brasileirao_links = []
 
-        # Iterando por cada notícia
         for news in all_news:
             title = news.find('p', class_='text-more-news-title-desk-lg')
             image = news.find('img', class_='rounded-normal')
             date = news.find('p', class_='text-more-news-date-desk-lg')
             link = 'https://www.lance.com.br' + news['href']
-            
-            # Verificando se os elementos foram encontrados e se o título começa com "Brasileirão"
+
             if title and title.text.startswith('Brasileirão'):
                 title_text = brasileirao_titles.append(title.text)
                 image_url = brasileirao_images.append(image['src'])
                 date_text = brasileirao_dates.append(date.text)
                 link_text = brasileirao_links.append(link)
 
-        # Imprimindo os dados filtrados
             send_photo_lance(title_text, image_url, date_text, link_text)
 
     except requests.RequestException as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
+
 
 def send_photo_lance(title_text, image_url, date_text, link_text):
     try:
         if db.search_title(title_text):
-                    logger.info(f"A notícia '{title_text}' já foi postada.")
+            logger.info(f"A notícia '{title_text}' já foi postada.")
         else:
             current_datetime = datetime.now() - timedelta(hours=3)
             date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
             db.add_news(title_text, date)
 
-        button_text = f"https://www.lance.com.br{link_text}"  # Texto do botão
+        button_text = f'https://www.lance.com.br{link_text}'  # Texto do botão
         markup = types.InlineKeyboardMarkup()
-        btn_news = types.InlineKeyboardButton(text='Ver notícia completa', url=button_text)
+        btn_news = types.InlineKeyboardButton(
+            text='Ver notícia completa', url=button_text
+        )
         markup.add(btn_news)
-        
-        bot.send_photo(CHANNEL, photo=image_url, caption=f"<b>{title_text}</b>\n\n<code>{date_text}</code>", reply_markup=markup)
+
+        bot.send_photo(
+            CHANNEL,
+            photo=image_url,
+            caption=f'<b>{title_text}</b>\n\n<code>{date_text}</code>',
+            reply_markup=markup,
+        )
         sleep(100)
     except Exception as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
+
 
 def fora_do_campo():
     try:
         url = 'https://www.lance.com.br/fora-de-campo/mais-noticias.html'
 
-        # Realizando a requisição GET
         response = requests.get(url)
 
         if response.status_code == 200:
-            # Parsing do HTML com BeautifulSoup
             soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Encontrando a lista de notícias
             news_list = soup.find('ul', class_='styles_list__7maJJ')
 
             if news_list:
-                # Iterando sobre cada item de notícia na lista
                 for news_item in news_list.find_all('li'):
-                    # Obtendo o título da notícia
                     title = news_item.find('h3').text.strip()
 
-                    # Obtendo a URL da imagem
-                    image_url = 'https://www.lance.com.br' + news_item.find('img')['src']
+                    image_url = (
+                        'https://www.lance.com.br'
+                        + news_item.find('img')['src']
+                    )
 
-                    # Obtendo o horário e a data da notícia
-                    datetime = news_item.find('div', class_='styles_date__lZuoR').text.strip()
+                    datetime = news_item.find(
+                        'div', class_='styles_date__lZuoR'
+                    ).text.strip()
 
-                    # Obtendo o link da notícia
                     link = news_item.find('a')['href']
 
-                    # Obtendo o autor, se estiver disponível
-                    author = news_item.find('span', style='color:var(--green-lance)')
-                    author_name = author.text if author else 'Autor não disponível'
+                    author = news_item.find(
+                        'span', style='color:var(--green-lance)'
+                    )
+                    author_name = (
+                        author.text if author else 'Autor não disponível'
+                    )
 
-                    # Imprimindo os dados coletados
-                    send_text_fora_do_campo(title, image_url, datetime, author_name, link)
+                    send_text_fora_do_campo(
+                        title, image_url, datetime, author_name, link
+                    )
 
             else:
-                logger.info("Lista de notícias não encontrada.")
+                logger.info('Lista de notícias não encontrada.')
         else:
-            logger.info("Falha ao obter a página.")
+            logger.info('Falha ao obter a página.')
     except requests.RequestException as e:
-            logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
+
 
 def send_text_fora_do_campo(title, image_url, datetime, author_name, link):
     try:
         if db.search_title(title):
-                    logger.info(f"A notícia '{title}' já foi postada.")
+            logger.info(f"A notícia '{title}' já foi postada.")
         else:
             current_datetime = datetime.now() - timedelta(hours=3)
             date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
             db.add_news(title, date)
 
-        button_text = f"https://www.lance.com.br{link}"  # Texto do botão
+        button_text = f'https://www.lance.com.br{link}'
         markup = types.InlineKeyboardMarkup()
-        btn_news = types.InlineKeyboardButton(text='Ver notícia completa', url=button_text)
+        btn_news = types.InlineKeyboardButton(
+            text='Ver notícia completa', url=button_text
+        )
         markup.add(btn_news)
-        
-        bot.send_photo(CHANNEL, photo=image_url, caption=f"<b>{title}</b>\n\n<code>{datetime}</code> - Feito por {author_name}", reply_markup=markup)
+
+        bot.send_photo(
+            CHANNEL,
+            photo=image_url,
+            caption=f'<b>{title}</b>\n\n<code>{datetime}</code> - Feito por {author_name}',
+            reply_markup=markup,
+        )
         sleep(100)
     except Exception as e:
-        logger.info(f"Request Exception: {e}")
-    
+        logger.info(f'Request Exception: {e}')
+
+
 def libertadores():
     try:
         url = 'https://www.lance.com.br/libertadores/mais-noticias.html'
@@ -697,42 +763,120 @@ def libertadores():
             for post in posts:
                 title = post.find('h3').text.strip()
                 image_url = post.find('img')['src']
-                date_time = post.find('div', class_='styles_date__lZuoR').text.strip()
-                author_tag = post.find('span', style='color:var(--green-lance)')
+                date_time = post.find(
+                    'div', class_='styles_date__lZuoR'
+                ).text.strip()
+                author_tag = post.find(
+                    'span', style='color:var(--green-lance)'
+                )
                 if author_tag:
                     author = author_tag.text.strip()
                 else:
-                    # If not found, try to find another pattern or skip
-                    # For instance, if the author is within a different structure
-                    author = "Author Not Found"  # Modify this accordingly
+                    author = 'Author Not Found'
                 post_url = 'https://www.lance.com.br' + post.find('a')['href']
 
-                send_libertadores_text(title, image_url, date_time, author, post_url)
+                send_libertadores_text(
+                    title, image_url, date_time, author, post_url
+                )
         else:
-            print("Failed to retrieve the webpage")
+            logger.info('Failed to retrieve the webpage')
     except requests.RequestException as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
+
 
 def send_libertadores_text(title, image_url, date_time, author, post_url):
     try:
         if db.search_title(title):
-                    logger.info(f"A notícia '{title}' já foi postada.")
+            logger.info(f"A notícia '{title}' já foi postada.")
         else:
             current_datetime = datetime.now() - timedelta(hours=3)
             date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
             db.add_news(title, date)
 
-        button_text = f"https://www.lance.com.br{post_url}"  # Texto do botão
+        button_text = f'https://www.lance.com.br{post_url}'  # Texto do botão
         markup = types.InlineKeyboardMarkup()
-        btn_news = types.InlineKeyboardButton(text='Ver notícia completa', url=button_text)
+        btn_news = types.InlineKeyboardButton(
+            text='Ver notícia completa', url=button_text
+        )
         markup.add(btn_news)
-        
-        bot.send_photo(CHANNEL, photo=image_url, caption=f"<b>{title}</b>\n\n<code>{date_time}</code> - Feito por: {author}", reply_markup=markup)
+
+        bot.send_photo(
+            CHANNEL,
+            photo=image_url,
+            caption=f'<b>{title}</b>\n\n<code>{date_time}</code> - Feito por: {author}',
+            reply_markup=markup,
+        )
         sleep(100)
     except Exception as e:
-        logger.info(f"Request Exception: {e}")
+        logger.info(f'Request Exception: {e}')
+
+
+def check_match_status():
+    url = 'https://www.placardefutebol.com.br/brasileirao-serie-a'
+    response = requests.get(url)
+    soup = BeautifulSoup(response.content, 'html.parser')
+
+    matches = soup.find_all('h3', class_='match-list_league-name')
+    for match in matches:
+        if match.text.strip() == 'Campeonato Brasileiro':
+            match_info = match.find_next('a')
+            match_time = match_info.find(
+                'span', class_='status-name'
+            ).text.strip()
+            match_teams = match_info.find_all('h5', class_='team_link')
+            home_team = match_teams[0].text.strip()
+            away_team = match_teams[1].text.strip()
+
+            if 'MIN' in match_time:
+                send_message_to_channel(
+                    f'A partida entre {home_team} e {away_team} começou!'
+                )
+            else:
+                logger.info(
+                    f'The match between {home_team} and {away_team} has not started yet.'
+                )
+
+
+def send_message_to_channel(message):
+    try:
+        bot.send_message(CHANNEL, text=message)
+        logger.info(f'Message sent to the channel: {message}')
+    except Exception as e:
+        logger.info(f'Failed to send message to channel: {e}')
+
+
+def status_gol():
+    url = 'https://www.placardefutebol.com.br/'
+    r = requests.get(url)
+    soup = BeautifulSoup(r.text, 'html.parser')
+    matches = soup.find_all('div', {'class': 'match-card-events'})
+
+    for match in matches:
+        try:
+            gols = match.find_all('i', {'class': 'fa fa-futbol-o'})
+            if gols:
+                teams = match.find_all('div', {'class': 'team-name'})
+                team_names = [team.text.strip() for team in teams]
+
+                scores = match.find('div', {'class': 'match-score'})
+                score_text = scores.text.strip().replace('\n', ' x ')
+
+                goal_team = (
+                    gols[0]
+                    .find_previous('div', {'class': 'team-name'})
+                    .text.strip()
+                )
+
+                message = f'goooooooooooooollll!!\nGolaço do {goal_team}\nPartida está:\n{team_names[0]} {score_text} {team_names[1]}'
+
+                send_message_to_channel(message)
+        except Exception as e:
+            logger.info(f'Error: {e}')
+
 
 def schedule_tasks():
+    schedule.every().minute.do(check_match_status)
+    schedule.every().minute.do(status_gol)
     schedule.every(15).minutes.do(send_news_g1)
     schedule.every(15).minutes.do(check_news_and_send)
     schedule.every(15).minutes.do(scrape_website)
@@ -756,7 +900,6 @@ def schedule_tasks():
     schedule.every().day.at('23:58').do(total_news)
 
 
-# Função principal do bot
 def main():
     try:
         logger.info('BOT INICIANDO...')
@@ -764,14 +907,14 @@ def main():
 
         while True:
             schedule.run_pending()
-            sleep(60)  # Espera um minuto antes de verificar novamente
+            sleep(60)  
     except KeyboardInterrupt:
-        logger.info('Encerrando o bot devido ao comando de interrupção (Ctrl+C)')
+        logger.info(
+            'Encerrando o bot devido ao comando de interrupção (Ctrl+C)'
+        )
     except Exception as e:
         logger.exception(f'Erro não tratado: {str(e)}')
 
+
 if __name__ == '__main__':
     main()
-
-
-
