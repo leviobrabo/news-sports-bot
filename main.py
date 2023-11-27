@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import configparser
 from telebot.apihelper import ApiTelegramException
 import psutil
-from PIL import Image, ImageDraw, ImageFont
 
 import telebot
 from telebot import types
@@ -240,32 +239,6 @@ def delete_news():
             f'Erro ao deletar as notícias do banco de dados: {str(e)}'
         )
 
-# Função para criar a imagem com o texto
-def create_image_with_text(message_text):
-    background_image = Image.open('400x1090.png')
-
-    font_path = 'impact.ttf'
-    font_size = 22
-    font = ImageFont.truetype(font_path, font_size)
-
-    draw = ImageDraw.Draw(background_image)
-
-    x = 10
-    y = 10
-
-    lines = message_text.split('\n')
-    for line in lines:
-        draw.text((x, y), line, fill='white', font=font)
-        y += font_size + 5  
-
-    background_image.save('table_image.png')
-
-def send_image_to_telegram(image_bytes):
-    try:
-        bot.send_photo(chat_id=CHANNEL, photo=image_bytes, caption='Tabela do Brasileirão')
-        logger.info("Imagem enviada com sucesso para o canal!")
-    except Exception as e:
-        logger.error(f'Erro ao enviar a imagem para o Telegram: {str(e)}')
 
 
 def send_table_message():
@@ -304,18 +277,12 @@ def send_table_message():
             )
             message += table_row
 
-            image_bytes = create_image_with_text(message)
-            logger.info("Imagem gerada com sucesso!")
-
-            with open('table_image.png', 'wb') as file:
-                file.write(image_bytes.getvalue())
-                logger.info("Imagem salva localmente com sucesso!")
-
-        # Enviar a imagem para o Telegram separadamente
-            send_image_to_telegram(image_bytes)
+        # Enviar mensagem para o Telegram
+        bot.send_message(CHANNEL, message, parse_mode='HTML')
+        logger.info('Mensagem da tabela enviada com sucesso para o Telegram.')
 
     except Exception as e:
-        logger.error(f'Erro inesperado ao enviar a imagem: {str(e)}')
+        logger.error(f'Erro ao enviar a mensagem da tabela para o Telegram: {str(e)}')
 
 
 def enviar_mensagem():
@@ -403,7 +370,7 @@ def check_news_and_send():
                 
                 # Verificando se o título da notícia já está no banco de dados
                 if db.search_title(title):
-                    logger.info(f"A notícia '{title}' já foi postada.")
+                    print(f"A notícia '{title}' já foi postada.")
                 else:
                     current_datetime = datetime.now() - timedelta(hours=3)
                     date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
@@ -422,9 +389,9 @@ def check_news_and_send():
                     bot.send_photo(CHANNEL, photo=image, caption=f"<b>{title}</b>\n\n<code>{date}</code>", reply_markup=markup)
                     sleep(100)
         else:
-            logger.info("Não foram encontradas notícias.")
+            print("Não foram encontradas notícias.")
     else:
-        logger.info("Falha ao obter a página")
+        print("Falha ao obter a página")
 
 def send_news_g1():
     try:
@@ -458,19 +425,25 @@ def schedule_tasks():
     schedule.every(15).minutes.do(check_news_and_send)
     schedule.every(6).hours.do(enviar_mensagem)
     schedule.every(6).hours.do(send_table_message)
+    schedule.every().day.at('08:20').do(enviar_mensagem)
+    schedule.every().day.at('15:20').do(enviar_mensagem)
+    schedule.every().day.at('18:20').do(enviar_mensagem)
     schedule.every().day.at('20:20').do(enviar_mensagem)
-    schedule.every().day.at('20:59').do(send_table_message)
+    schedule.every().day.at('10:15').do(send_table_message)
+    schedule.every().day.at('16:15').do(send_table_message)
+    schedule.every().day.at('21:15').do(send_table_message)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
 # Função principal do bot
 def main():
     try:
+        logger.info('BOT INICIANDO...')
         schedule_tasks()
 
         while True:
             schedule.run_pending()
-            sleep(5)  # Espera um minuto antes de verificar novamente
+            sleep(60)  # Espera um minuto antes de verificar novamente
     except KeyboardInterrupt:
         logger.info('Encerrando o bot devido ao comando de interrupção (Ctrl+C)')
     except Exception as e:
@@ -478,7 +451,6 @@ def main():
 
 if __name__ == '__main__':
     main()
-    logger.info('BOT INICIADO...')
 
 
 
