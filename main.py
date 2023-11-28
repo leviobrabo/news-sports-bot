@@ -383,7 +383,7 @@ def check_news_and_send():
                         caption=f'<b>{title}</b>\n\n<code>{date}</code>',
                         reply_markup=markup,
                     )
-                    sleep(100)
+                    sleep(1800)
         else:
             logger.info('Não foram encontradas notícias.')
     else:
@@ -481,7 +481,7 @@ def send_to_bot(title, image_url, date, author, link):
             caption=f'<b>{title}</b>\n\n<code>{date}</code> - Feito por: {author}',
             reply_markup=markup,
         )
-        sleep(100)
+        sleep(1800)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -544,7 +544,7 @@ def send_artilheiro(
         message += '-' * 30 + '\n'
 
         bot.send_message(CHANNEL, message)
-        sleep(100)
+        sleep(1800)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -671,7 +671,7 @@ def send_photo_lance(title_text, image_url, date_text, link_text):
             caption=f'<b>{title_text}</b>\n\n<code>{date_text}</code>',
             reply_markup=markup,
         )
-        sleep(100)
+        sleep(1800)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -743,7 +743,7 @@ def send_text_fora_do_campo(title, image_url, datetime, author_name, link):
             caption=f'<b>{title}</b>\n\n<code>{datetime}</code> - Feito por {author_name}',
             reply_markup=markup,
         )
-        sleep(100)
+        sleep(1800)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -804,7 +804,7 @@ def send_libertadores_text(title, image_url, date_time, author, post_url):
             caption=f'<b>{title}</b>\n\n<code>{date_time}</code> - Feito por: {author}',
             reply_markup=markup,
         )
-        sleep(100)
+        sleep(1800)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
