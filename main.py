@@ -420,7 +420,7 @@ def send_news_g1():
         )
 
 
-def scrape_website(url):
+def scrape_website(url='https://www.lance.com.br/futebol-nacional/mais-noticias.html'):
     try:
         response = requests.get(url)
         if response.status_code == 200:
@@ -485,8 +485,6 @@ def send_to_bot(title, image_url, date, author, link):
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
-
-scrape_website('https://www.lance.com.br/futebol-nacional/mais-noticias.html')
 
 
 def artilheiro_py():
