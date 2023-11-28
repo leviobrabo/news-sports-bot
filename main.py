@@ -448,7 +448,7 @@ def scrape_website(url):
 
                 link_elem = article.find('a')
                 link = (
-                    'https://www.lance.com.br' + link_elem['href']
+                     link_elem['href']
                     if link_elem
                     else 'Link não encontrado'
                 )
