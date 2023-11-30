@@ -448,7 +448,7 @@ def scrape_website(url='https://www.lance.com.br/futebol-nacional/mais-noticias.
 
                 link_elem = article.find('a')
                 link = (
-                     link_elem['href']
+                    link_elem['href']
                     if link_elem
                     else 'Link não encontrado'
                 )
@@ -484,7 +484,6 @@ def send_to_bot(title, image_url, date, author, link):
         sleep(1800)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
-
 
 
 def artilheiro_py():
@@ -547,10 +546,6 @@ def send_artilheiro(
         sleep(1800)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
-
-
-import requests
-from bs4 import BeautifulSoup
 
 
 def assitencia():
@@ -618,9 +613,7 @@ def send_assitencia(
 
 def ultimos_jogos():
     try:
-        url = (
-            'https://www.lance.com.br/resenha-de-apostas/mais-noticias?page=1'
-        )
+        url = 'https://www.lance.com.br/resenha-de-apostas/mais-noticias?page=1'
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
 
@@ -638,12 +631,18 @@ def ultimos_jogos():
             link = 'https://www.lance.com.br' + news['href']
 
             if title and title.text.startswith('Brasileirão'):
-                title_text = brasileirao_titles.append(title.text)
-                image_url = brasileirao_images.append(image['src'])
-                date_text = brasileirao_dates.append(date.text)
-                link_text = brasileirao_links.append(link)
+                title_text = title.text
+                image_url = image['src']
+                date_text = date.text
+                link_text = link
 
-            send_photo_lance(title_text, image_url, date_text, link_text)
+                # Append to lists
+                brasileirao_titles.append(title_text)
+                brasileirao_images.append(image_url)
+                brasileirao_dates.append(date_text)
+                brasileirao_links.append(link_text)
+
+                send_photo_lance(title_text, image_url, date_text, link_text)
 
     except requests.RequestException as e:
         logger.info(f'Request Exception: {e}')
@@ -696,7 +695,7 @@ def fora_do_campo():
                         + news_item.find('img')['src']
                     )
 
-                    datetime = news_item.find(
+                    datetime_str = news_item.find(
                         'div', class_='styles_date__lZuoR'
                     ).text.strip()
 
@@ -710,7 +709,7 @@ def fora_do_campo():
                     )
 
                     send_text_fora_do_campo(
-                        title, image_url, datetime, author_name, link
+                        title, image_url, datetime_str, author_name, link
                     )
 
             else:
@@ -721,7 +720,7 @@ def fora_do_campo():
         logger.info(f'Request Exception: {e}')
 
 
-def send_text_fora_do_campo(title, image_url, datetime, author_name, link):
+def send_text_fora_do_campo(title, image_url, datetime_str, author_name, link):
     try:
         if db.search_title(title):
             logger.info(f"A notícia '{title}' já foi postada.")
@@ -740,7 +739,7 @@ def send_text_fora_do_campo(title, image_url, datetime, author_name, link):
         bot.send_photo(
             CHANNEL,
             photo=image_url,
-            caption=f'<b>{title}</b>\n\n<code>{datetime}</code> - Feito por {author_name}',
+            caption=f'<b>{title}</b>\n\n<code>{datetime_str}</code> - Feito por {author_name}',
             reply_markup=markup,
         )
         sleep(1800)
@@ -771,7 +770,7 @@ def libertadores():
                     author = author_tag.text.strip()
                 else:
                     author = 'Author Not Found'
-                post_url = 'https://www.lance.com.br' + post.find('a')['href']
+                post_url = post.find('a')['href']
 
                 send_libertadores_text(
                     title, image_url, date_time, author, post_url
@@ -905,7 +904,7 @@ def main():
 
         while True:
             schedule.run_pending()
-            sleep(60)  
+            sleep(60)
     except KeyboardInterrupt:
         logger.info(
             'Encerrando o bot devido ao comando de interrupção (Ctrl+C)'
