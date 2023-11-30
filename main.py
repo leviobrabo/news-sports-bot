@@ -488,9 +488,7 @@ def send_to_bot(title, image_url, date, author, link):
 
 def artilheiro_py():
     try:
-
         url = 'https://www.lance.com.br/tabela/brasileirao'
-
         response = requests.get(url)
 
         if response.status_code == 200:
@@ -498,50 +496,38 @@ def artilheiro_py():
 
             artilheiros = soup.find_all(class_='styles_infoItem__oVN6c')[:10]
 
+            message = '<b>Artilheiros do Brasileirão</b>\n\n'
+
             for artilheiro in artilheiros:
                 posicao = artilheiro.find(
-                    class_='styles_infoPos__hzOKU'
-                ).text.strip()
+                    class_='styles_infoPos__hzOKU').text.strip()
                 nome_time = artilheiro.find(title=True)['title']
                 nome_jogador = artilheiro.find(
-                    class_='styles_playerName__iZPeZ'
-                ).text.strip()
+                    class_='styles_playerName__iZPeZ').text.strip()
                 posicao_jogador = artilheiro.find(
-                    class_='styles_playerPosition__T9BX1'
-                ).text.strip()
+                    class_='styles_playerPosition__T9BX1').text.strip()
                 jogos = artilheiro.find_all('span')[0].text.strip()
                 media = artilheiro.find_all('span')[1].text.strip()
                 gols = artilheiro.find('p').text.strip()
 
-                send_artilheiro(
-                    posicao,
-                    nome_time,
-                    nome_jogador,
-                    posicao_jogador,
-                    jogos,
-                    media,
-                    gols,
-                )
+                message += f'<b>Posição:</b> {posicao}\n'
+                message += f'<b>Time:</b> {nome_time}\n'
+                message += f'<b>Jogador:</b> {nome_jogador}\n'
+                message += f'<b>Posição:</b> {posicao_jogador}\n'
+                message += f'<b>Jogos:</b> {jogos}\n'
+                message += f'<b>Média:</b> {media}\n'
+                message += f'<b>Gols:</b> {gols}\n'
+                message += '-' * 30 + '\n'
+
+            send_artilheiro(message)
         else:
             logger.info('Falha ao obter a página')
     except requests.RequestException as e:
         logger.info(f'Request Exception: {e}')
 
 
-def send_artilheiro(
-    posicao, nome_time, nome_jogador, posicao_jogador, jogos, media, gols
-):
+def send_artilheiro(message):
     try:
-        message = '<b>Artilheiros do Brasileirão</b>\n\n'
-        message += f'<b>Posição:</b> {posicao}\n'
-        message += f'<b>Time:</b> {nome_time}\n'
-        message += f'<b>Jogador:</b> {nome_jogador}\n'
-        message += f'<b>Posição:</b> {posicao_jogador}\n'
-        message += f'<b>Jogos:</b> {jogos}\n'
-        message += f'<b>Média:</b> {media}\n'
-        message += f'<b>Gols:</b> {gols}\n'
-        message += '-' * 30 + '\n'
-
         bot.send_message(CHANNEL, message)
         sleep(1800)
     except Exception as e:
@@ -904,7 +890,7 @@ def main():
 
         while True:
             schedule.run_pending()
-            sleep(60)
+            sleep(1)
     except KeyboardInterrupt:
         logger.info(
             'Encerrando o bot devido ao comando de interrupção (Ctrl+C)'
