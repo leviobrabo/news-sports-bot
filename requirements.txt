@@ -7,3 +7,4 @@ configparser==6.0.0
 loguru==0.7.0
 psutil==5.9.6
 telegraph==2.2.0
+Pillow==10.1.0

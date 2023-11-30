@@ -1,5 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
+from PIL import Image
+from io import BytesIO
 
 import configparser
 from telebot.apihelper import ApiTelegramException
@@ -367,6 +369,8 @@ def check_news_and_send():
 
                     # URL da imagem
                     image = card.find('img')['src']
+                    # Redimensionar a URL da imagem para 512x512
+                    image = image.replace('/width=3840', '/width=512')
 
                     button_text = (
                         f'https://www.lance.com.br{link}'  # Texto do botão
@@ -459,6 +463,20 @@ def scrape_website(url='https://www.lance.com.br/futebol-nacional/mais-noticias.
         logger.info(f'Request Exception: {e}')
 
 
+def resize_image(image_url):
+    try:
+        response = requests.get(image_url)
+        if response.status_code == 200:
+            img = Image.open(BytesIO(response.content))
+            img = img.resize((512, 512), Image.ANTIALIAS)
+            buffered = BytesIO()
+            img.save(buffered, format="JPEG")
+            return buffered.getvalue()
+    except Exception as e:
+        logger.error(f"Erro ao redimensionar imagem: {e}")
+        return None
+
+
 def send_to_bot(title, image_url, date, author, link):
     try:
         if db.search_title(title):
@@ -467,6 +485,7 @@ def send_to_bot(title, image_url, date, author, link):
             current_datetime = datetime.now() - timedelta(hours=3)
             date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
             db.add_news(title, date)
+        resized_image = resize_image(image_url)
 
         button_text = f'https://www.lance.com.br{link}'  # Texto do botão
         markup = types.InlineKeyboardMarkup()
@@ -474,14 +493,17 @@ def send_to_bot(title, image_url, date, author, link):
             text='Ver notícia completa', url=button_text
         )
         markup.add(btn_news)
-
-        bot.send_photo(
-            CHANNEL,
-            photo=image_url,
-            caption=f'<b>{title}</b>\n\n<code>{date}</code> - Feito por: {author}',
-            reply_markup=markup,
-        )
-        sleep(1800)
+        if resized_image:
+            bot.send_photo(
+                CHANNEL,
+                photo=image_url,
+                caption=f'<b>{title}</b>\n\n<code>{date}</code> - Feito por: {author}',
+                reply_markup=markup,
+            )
+            sleep(1800)
+            pass
+        else:
+            logger.error("Falha ao redimensionar imagem.")
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -618,7 +640,7 @@ def ultimos_jogos():
 
             if title and title.text.startswith('Brasileirão'):
                 title_text = title.text
-                image_url = image['src']
+                image_url = image['src'].replace('/width=3840', '/width=512')
                 date_text = date.text
                 link_text = link
 
@@ -776,20 +798,24 @@ def send_libertadores_text(title, image_url, date_time, author, post_url):
             date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
             db.add_news(title, date)
 
+        resized_image = resize_image(image_url)
         button_text = f'https://www.lance.com.br{post_url}'  # Texto do botão
         markup = types.InlineKeyboardMarkup()
         btn_news = types.InlineKeyboardButton(
             text='Ver notícia completa', url=button_text
         )
         markup.add(btn_news)
-
-        bot.send_photo(
-            CHANNEL,
-            photo=image_url,
-            caption=f'<b>{title}</b>\n\n<code>{date_time}</code> - Feito por: {author}',
-            reply_markup=markup,
-        )
-        sleep(1800)
+        if resized_image:
+            bot.send_photo(
+                CHANNEL,
+                photo=image_url,
+                caption=f'<b>{title}</b>\n\n<code>{date_time}</code> - Feito por: {author}',
+                reply_markup=markup,
+            )
+            sleep(1800)
+            pass
+        else:
+            logger.error("Falha ao redimensionar imagem.")
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
