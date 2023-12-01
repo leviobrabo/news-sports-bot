@@ -257,12 +257,12 @@ def send_table_message():
             nome_time = linha.find('span', class_='hide__s').text.strip()
 
             dados_time = linha.find_all('td')
-            pontos = dados_time[2].text.strip()
-            jogos = dados_time[3].text.strip()
-            vitorias = dados_time[4].text.strip()
-            empates = dados_time[5].text.strip()
-            derrotas = dados_time[6].text.strip()
-            saldo_gols = dados_time[7].text.strip()
+            pontos = dados_time[1].text.strip()
+            jogos = dados_time[2].text.strip()
+            vitorias = dados_time[3].text.strip()
+            empates = dados_time[4].text.strip()
+            derrotas = dados_time[5].text.strip()
+            saldo_gols = dados_time[8].text.strip()
 
             table_row = (
                 f'🏆 {classificacao} - <b>{nome_time}</b>\n'
