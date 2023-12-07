@@ -217,6 +217,36 @@ def create_telegraph_posts():
     return telegraph_links
 
 
+def send_news_g1():
+    try:
+        logger.info('Iniciando verificação e envio de notícias...')
+        created_links = create_telegraph_posts()
+
+        for telegraph_link, title, original_link in created_links:
+            news_name = db.search_title(title)
+
+            if news_name:
+                logger.info('A notícia já foi postada.')
+            else:
+                logger.info('Adicionando notícia ao banco de dados...')
+                current_datetime = datetime.now() - timedelta(hours=3)
+                date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
+                db.add_news(title, date)
+
+                logger.info('Enviando notícia...')
+                bot.send_message(
+                    CHANNEL,
+                    f'<a href="{telegraph_link}">󠀠</a><b>{title}</b>\n\n'
+                    f'🗞 <a href="{original_link}">G1 SPORTS</a>',
+                    parse_mode='HTML',
+                )
+                sleep(300)
+    except Exception as e:
+        logger.exception(
+            f'Erro durante verificação e envio de notícias: {str(e)}'
+        )
+
+
 def total_news():
     try:
         all_news = db.get_all_news()
@@ -283,7 +313,7 @@ def send_table_message():
         )
 
 
-def enviar_mensagem():
+def placar_de_jogo():
     url = 'https://www.placardefutebol.com.br/jogos-de-hoje'
 
     response = requests.get(url)
@@ -334,14 +364,17 @@ def enviar_mensagem():
 
                     jogos_campeonato_brasileiro.append(jogo)
 
-        mensagem = '<b>Jogos do Campeonato Brasileiro da Série A:</b>\n\n'
-        for jogo in jogos_campeonato_brasileiro:
-            if 'Placar Casa' in jogo:
-                mensagem += f"{jogo['Time da Casa']} {jogo['Placar Casa']} - {jogo['Placar Visitante']} {jogo['Time Visitante']} ({jogo['Status']})\n"
-            else:
-                mensagem += f"{jogo['Time da Casa']} x {jogo['Time Visitante']} ({jogo['Status']})\n"
+        if jogos_campeonato_brasileiro:
+            mensagem = '<b>Jogos do Campeonato Brasileiro da Série A:</b>\n\n'
+            for jogo in jogos_campeonato_brasileiro:
+                if 'Placar Casa' in jogo:
+                    mensagem += f"{jogo['Time da Casa']} {jogo['Placar Casa']} - {jogo['Placar Visitante']} {jogo['Time Visitante']} ({jogo['Status']})\n"
+                else:
+                    mensagem += f"{jogo['Time da Casa']} x {jogo['Time Visitante']} ({jogo['Status']})\n"
 
-        bot.send_message(CHANNEL, mensagem)
+            bot.send_message(CHANNEL, mensagem)
+        else:
+            print("Nenhum jogo encontrado")
 
 
 def check_news_and_send():
@@ -367,9 +400,7 @@ def check_news_and_send():
                     date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
                     db.add_news(title, date)
 
-                    # URL da imagem
                     image = card.find('img')['src']
-                    # Redimensionar a URL da imagem para 512x512
                     image = image.replace('/width=3840', '/width=512')
 
                     button_text = (
@@ -387,41 +418,11 @@ def check_news_and_send():
                         caption=f'<b>{title}</b>\n\n<code>{date}</code>',
                         reply_markup=markup,
                     )
-                    sleep(1800)
+                    sleep(3600)
         else:
             logger.info('Não foram encontradas notícias.')
     else:
         logger.info('Falha ao obter a página')
-
-
-def send_news_g1():
-    try:
-        logger.info('Iniciando verificação e envio de notícias...')
-        created_links = create_telegraph_posts()
-
-        for telegraph_link, title, original_link in created_links:
-            news_name = db.search_title(title)
-
-            if news_name:
-                logger.info('A notícia já foi postada.')
-            else:
-                logger.info('Adicionando notícia ao banco de dados...')
-                current_datetime = datetime.now() - timedelta(hours=3)
-                date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
-                db.add_news(title, date)
-
-                logger.info('Enviando notícia...')
-                bot.send_message(
-                    CHANNEL,
-                    f'<a href="{telegraph_link}">󠀠</a><b>{title}</b>\n\n'
-                    f'🗞 <a href="{original_link}">G1 SPORTS</a>',
-                    parse_mode='HTML',
-                )
-                sleep(300)
-    except Exception as e:
-        logger.exception(
-            f'Erro durante verificação e envio de notícias: {str(e)}'
-        )
 
 
 def scrape_website(url='https://www.lance.com.br/futebol-nacional/mais-noticias.html'):
@@ -432,7 +433,7 @@ def scrape_website(url='https://www.lance.com.br/futebol-nacional/mais-noticias.
 
             articles = soup.find_all(
                 'div', class_='styles_card__XBZhk'
-            )  # Altere essa classe de acordo com a estrutura do site
+            )
 
             for article in articles:
                 title = article.find('h3').text.strip()
@@ -500,7 +501,7 @@ def send_to_bot(title, image_url, date, author, link):
                 caption=f'<b>{title}</b>\n\n<code>{date}</code> - Feito por: {author}',
                 reply_markup=markup,
             )
-            sleep(1800)
+            sleep(3600)
             pass
         else:
             logger.error("Falha ao redimensionar imagem.")
@@ -556,7 +557,7 @@ def send_artilheiro(message):
         logger.info(f'Request Exception: {e}')
 
 
-def assitencia():
+def assistencia():
     try:
         url = 'https://www.lance.com.br/tabela/brasileirao'
         response = requests.get(url)
@@ -564,57 +565,51 @@ def assitencia():
         if response.status_code == 200:
             soup = BeautifulSoup(response.content, 'html.parser')
 
-            info_items = soup.find_all('div', class_='styles_infoItem__oVN6c')[
-                :10
-            ]
+            info_items = soup.find_all(
+                'div', class_='styles_infoItem__oVN6c')[:10]
+
+            message = '<b>Assistências do Brasileirão</b>\n\n'
 
             for item in info_items:
                 ranking = item.find(
-                    'div', class_='styles_infoPos__hzOKU'
-                ).text.strip()
+                    'div', class_='styles_infoPos__hzOKU').text.strip()
                 team_name = item.find('img')['title']
                 player_name = item.find(
-                    'span', class_='styles_playerName__iZPeZ'
-                ).text
+                    'span', class_='styles_playerName__iZPeZ').text
                 position = item.find(
-                    'span', class_='styles_playerPosition__T9BX1'
-                ).text
+                    'span', class_='styles_playerPosition__T9BX1').text
                 games = item.find_all('span')[0].text
                 average = item.find_all('span')[1].text
                 goals = item.find('p').text
 
-                send_assitencia(
-                    ranking,
-                    team_name,
-                    player_name,
-                    position,
-                    games,
-                    average,
-                    goals,
-                )
+                message += f'<b>Posição:</b> {ranking}\n'
+                message += f'<b>Time:</b> {team_name}\n'
+                message += f'<b>Jogador:</b> {player_name}\n'
+                message += f'<b>Posição:</b> {position}\n'
+                message += f'<b>Jogos:</b> {games}\n'
+                message += f'<b>Média:</b> {average}\n'
+                message += f'<b>Assistências:</b> {goals}\n'
+                message += '-' * 30 + '\n'
 
+            send_assistencia(message)
         else:
-            logger.info('Failed to retrieve the page.')
+            logger.info('Falha ao obter a página')
     except requests.RequestException as e:
         logger.info(f'Request Exception: {e}')
 
 
-def send_assitencia(
-    ranking, team_name, player_name, position, games, average, goals
-):
+def send_assistencia(message):
     try:
-        message = '<b>Assistências do Brasileirão</b>\n\n'
-        message += f'<b>Posição:</b> {ranking}\n'
-        message += f'<b>Time:</b> {team_name}\n'
-        message += f'<b>Jogador:</b> {player_name}\n'
-        message += f'<b>Posição:</b> {position}\n'
-        message += f'<b>Jogos:</b> {games}\n'
-        message += f'<b>Média:</b> {average}\n'
-        message += f'<b>Assistências:</b> {goals}\n'
-        message += '-' * 30 + '\n'
+        max_message_length = 4096
 
-        bot.send_message(CHANNEL, message)
-        sleep(100)
+        if len(message) <= max_message_length:
+            bot.send_message(CHANNEL, message)
+        else:
+            parts = [message[i:i + max_message_length]
+                     for i in range(0, len(message), max_message_length)]
+            for part in parts:
+                bot.send_message(CHANNEL, part)
+                sleep(1)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -644,7 +639,6 @@ def ultimos_jogos():
                 date_text = date.text
                 link_text = link
 
-                # Append to lists
                 brasileirao_titles.append(title_text)
                 brasileirao_images.append(image_url)
                 brasileirao_dates.append(date_text)
@@ -665,7 +659,7 @@ def send_photo_lance(title_text, image_url, date_text, link_text):
             date = current_datetime.strftime('%d/%m/%Y - %H:%M:%S')
             db.add_news(title_text, date)
 
-        button_text = f'https://www.lance.com.br{link_text}'  # Texto do botão
+        button_text = f'https://www.lance.com.br{link_text}'
         markup = types.InlineKeyboardMarkup()
         btn_news = types.InlineKeyboardButton(
             text='Ver notícia completa', url=button_text
@@ -678,7 +672,7 @@ def send_photo_lance(title_text, image_url, date_text, link_text):
             caption=f'<b>{title_text}</b>\n\n<code>{date_text}</code>',
             reply_markup=markup,
         )
-        sleep(1800)
+        sleep(3600)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -750,7 +744,7 @@ def send_text_fora_do_campo(title, image_url, datetime_str, author_name, link):
             caption=f'<b>{title}</b>\n\n<code>{datetime_str}</code> - Feito por {author_name}',
             reply_markup=markup,
         )
-        sleep(1800)
+        sleep(3600)
     except Exception as e:
         logger.info(f'Request Exception: {e}')
 
@@ -799,7 +793,7 @@ def send_libertadores_text(title, image_url, date_time, author, post_url):
             db.add_news(title, date)
 
         resized_image = resize_image(image_url)
-        button_text = f'https://www.lance.com.br{post_url}'  # Texto do botão
+        button_text = f'https://www.lance.com.br{post_url}'
         markup = types.InlineKeyboardMarkup()
         btn_news = types.InlineKeyboardButton(
             text='Ver notícia completa', url=button_text
@@ -812,7 +806,7 @@ def send_libertadores_text(title, image_url, date_time, author, post_url):
                 caption=f'<b>{title}</b>\n\n<code>{date_time}</code> - Feito por: {author}',
                 reply_markup=markup,
             )
-            sleep(1800)
+            sleep(3600)
             pass
         else:
             logger.error("Falha ao redimensionar imagem.")
@@ -821,90 +815,88 @@ def send_libertadores_text(title, image_url, date_time, author, post_url):
 
 
 def check_match_status():
-    url = 'https://www.placardefutebol.com.br/brasileirao-serie-a'
-    response = requests.get(url)
-    soup = BeautifulSoup(response.content, 'html.parser')
+    try:
+        url = 'https://www.placardefutebol.com.br/brasileirao-serie-a'
+        response = requests.get(url)
+        soup = BeautifulSoup(response.content, 'html.parser')
 
-    matches = soup.find_all('h3', class_='match-list_league-name')
-    for match in matches:
-        if match.text.strip() == 'Campeonato Brasileiro':
-            match_info = match.find_next('a')
-            match_time = match_info.find(
-                'span', class_='status-name'
-            ).text.strip()
-            match_teams = match_info.find_all('h5', class_='team_link')
-            home_team = match_teams[0].text.strip()
-            away_team = match_teams[1].text.strip()
+        matches = soup.find_all('h3', class_='match-list_league-name')
+        for match in matches:
+            if match.text.strip() == 'Campeonato Brasileiro':
+                match_info = match.find_next('a')
+                match_time = match_info.find(
+                    'span', class_='status-name').text.strip()
+                match_teams = match_info.find_all('h5', class_='team_link')
+                home_team = match_teams[0].text.strip()
+                away_team = match_teams[1].text.strip()
 
-            if 'MIN' in match_time:
-                send_message_to_channel(
-                    f'A partida entre {home_team} e {away_team} começou!'
-                )
-            else:
-                logger.info(
-                    f'The match between {home_team} and {away_team} has not started yet.'
-                )
+                if 'MIN' in match_time:
+                    send_message_to_channel(
+                        f'A partida entre {home_team} e {away_team} começou!'
+                    )
+                else:
+                    logger.info(
+                        f'A partida entre {home_team} e {away_team} não começou ainda. Status: {match_time}'
+                    )
+    except Exception as e:
+        logger.error(f'Erro ao verificar o status da partida: {e}')
+
+
+def status_gol():
+    try:
+        url = 'https://www.placardefutebol.com.br/'
+        r = requests.get(url)
+        soup = BeautifulSoup(r.text, 'html.parser')
+        matches = soup.find_all('div', {'class': 'match-card-events'})
+
+        for match in matches:
+            try:
+                gols = match.find_all('i', {'class': 'fa fa-futbol-o'})
+                if gols:
+                    teams = match.find_all('div', {'class': 'team-name'})
+                    team_names = [team.text.strip() for team in teams]
+
+                    scores = match.find('div', {'class': 'match-score'})
+                    score_text = scores.text.strip().replace('\n', ' x ')
+
+                    goal_team = (
+                        gols[0]
+                        .find_previous('div', {'class': 'team-name'})
+                        .text.strip()
+                    )
+
+                    message = f'Gooooooooooooool!!\nGolaço do {goal_team}\nPartida está:\n{team_names[0]} {score_text} {team_names[1]}'
+
+                    send_message_to_channel(message)
+            except Exception as e:
+                logger.error(f'Erro: {e}')
+    except Exception as e:
+        logger.error(f'Erro ao obter os dados da página: {e}')
 
 
 def send_message_to_channel(message):
     try:
         bot.send_message(CHANNEL, text=message)
-        logger.info(f'Message sent to the channel: {message}')
+        logger.info(f'Mensagem enviada para o canal: {message}')
     except Exception as e:
-        logger.info(f'Failed to send message to channel: {e}')
-
-
-def status_gol():
-    url = 'https://www.placardefutebol.com.br/'
-    r = requests.get(url)
-    soup = BeautifulSoup(r.text, 'html.parser')
-    matches = soup.find_all('div', {'class': 'match-card-events'})
-
-    for match in matches:
-        try:
-            gols = match.find_all('i', {'class': 'fa fa-futbol-o'})
-            if gols:
-                teams = match.find_all('div', {'class': 'team-name'})
-                team_names = [team.text.strip() for team in teams]
-
-                scores = match.find('div', {'class': 'match-score'})
-                score_text = scores.text.strip().replace('\n', ' x ')
-
-                goal_team = (
-                    gols[0]
-                    .find_previous('div', {'class': 'team-name'})
-                    .text.strip()
-                )
-
-                message = f'goooooooooooooollll!!\nGolaço do {goal_team}\nPartida está:\n{team_names[0]} {score_text} {team_names[1]}'
-
-                send_message_to_channel(message)
-        except Exception as e:
-            logger.info(f'Error: {e}')
+        logger.error(f'Falha ao enviar mensagem para o canal: {e}')
 
 
 def schedule_tasks():
-    schedule.every().minute.do(check_match_status)
-    schedule.every().minute.do(status_gol)
+    schedule.every(1).minutes.do(check_match_status)
+    schedule.every(1).minute.do(status_gol)
     schedule.every(15).minutes.do(send_news_g1)
     schedule.every(15).minutes.do(check_news_and_send)
     schedule.every(15).minutes.do(scrape_website)
     schedule.every(15).minutes.do(libertadores)
     schedule.every(15).minutes.do(fora_do_campo)
     schedule.every(15).minutes.do(ultimos_jogos)
-    schedule.every(6).hours.do(enviar_mensagem)
-    schedule.every(6).hours.do(send_table_message)
-    schedule.every().day.at('08:20').do(enviar_mensagem)
-    schedule.every().day.at('15:20').do(enviar_mensagem)
-    schedule.every().day.at('18:20').do(enviar_mensagem)
-    schedule.every().day.at('20:20').do(enviar_mensagem)
-    schedule.every().day.at('10:15').do(send_table_message)
-    schedule.every().day.at('15:15').do(assitencia)
-    schedule.every().day.at('16:15').do(send_table_message)
-    schedule.every().day.at('17:15').do(artilheiro_py)
-    schedule.every().day.at('20:10').do(assitencia)
-    schedule.every().day.at('21:15').do(send_table_message)
-    schedule.every().day.at('22:10').do(artilheiro_py)
+    schedule.every(6).hours.do(placar_de_jogo)
+    schedule.every(8).hours.do(send_table_message)
+    schedule.every().day.at('05:15').do(send_table_message)
+    schedule.every().day.at('22:15').do(send_table_message)
+    schedule.every().day.at('15:15').do(assistencia)
+    schedule.every().day.at('20:10').do(artilheiro_py)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
