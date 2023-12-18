@@ -892,8 +892,6 @@ def schedule_tasks():
     schedule.every(15).minutes.do(fora_do_campo)
     schedule.every(15).minutes.do(ultimos_jogos)
     schedule.every(6).hours.do(placar_de_jogo)
-    schedule.every(8).hours.do(send_table_message)
-    schedule.every().day.at('05:15').do(send_table_message)
     schedule.every().day.at('22:15').do(send_table_message)
     schedule.every().day.at('15:15').do(assistencia)
     schedule.every().day.at('20:10').do(artilheiro_py)
