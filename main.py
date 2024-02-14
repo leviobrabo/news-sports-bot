@@ -254,6 +254,7 @@ def total_news():
         bot.send_message(
             GROUP_LOG,
             f'TOTAL de Notícia enviada hoje: <code>{total_count}</code> Notícias',
+            message_thread_id=38593,
         )
     except Exception as e:
         logger.exception(f'Error sending total news count: {str(e)}')
