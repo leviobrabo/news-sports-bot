@@ -273,7 +273,7 @@ def delete_news():
 def send_table_message():
     try:
         response = requests.get(
-            'https://www.cnnbrasil.com.br/esportes/futebol/tabela-brasileirao-serie-a/'
+            'https://www.cnnbrasil.com.br/esportes/futebol/tabela-do-brasileirao/'
         )
         content = response.content
         site = BeautifulSoup(content, 'html.parser')
@@ -405,7 +405,7 @@ def check_news_and_send():
                     image = image.replace('/width=3840', '/width=512')
 
                     button_text = (
-                        f'https://www.lance.com.br{link}'  # Texto do botão
+                        f'https://www.lance.com.br{link}'  
                     )
                     markup = types.InlineKeyboardMarkup()
                     btn_news = types.InlineKeyboardButton(
@@ -489,7 +489,7 @@ def send_to_bot(title, image_url, date, author, link):
             db.add_news(title, date)
         resized_image = resize_image(image_url)
 
-        button_text = f'https://www.lance.com.br{link}'  # Texto do botão
+        button_text = f'https://www.lance.com.br{link}' 
         markup = types.InlineKeyboardMarkup()
         btn_news = types.InlineKeyboardButton(
             text='Ver notícia completa', url=button_text
