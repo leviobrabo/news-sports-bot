@@ -4,8 +4,6 @@ from PIL import Image
 from io import BytesIO
 
 import configparser
-from telebot.apihelper import ApiTelegramException
-import psutil
 
 import telebot
 from telebot import types
@@ -14,11 +12,14 @@ import telegraph
 from datetime import datetime, timedelta
 from time import sleep
 
+import os
 import io
 import schedule
 import db
 from loguru import logger
 
+import news.artilheiro
+import news.tabela
 
 config = configparser.ConfigParser()
 config.read('bot.conf')
@@ -28,10 +29,7 @@ TOKEN = config['NEWS']['TOKEN']
 GROUP_LOG = int(config['NEWS']['NEWS_LOG'])
 CHANNEL = int(config['NEWS']['NEWS_CHANNEL'])
 CHANNEL_USERNAME = config['NEWS']['CHANNEL_USERNAME']
-BOT_NAME = config['NEWS']['BOT_NAME']
-BOT_USERNAME = config['NEWS']['BOT_USERNAME']
 OWNER = int(config['NEWS']['OWNER_ID'])
-OWNER_USERNAME = config['NEWS']['OWNER_USERNAME']
 TELEGRAPH = config['NEWS']['TELEGRAPH_TOKEN']
 
 bot = telebot.TeleBot(TOKEN, parse_mode='HTML')
@@ -270,49 +268,6 @@ def delete_news():
         )
 
 
-def send_table_message():
-    try:
-        response = requests.get(
-            'https://www.cnnbrasil.com.br/esportes/futebol/tabela-do-brasileirao/'
-        )
-        content = response.content
-        site = BeautifulSoup(content, 'html.parser')
-
-        tabela = site.find('tbody', class_='table__body')
-
-        linhas = tabela.find_all('tr', class_='body__row')
-
-        message = '<b>Tabela do Brasileirão ⚽️🇧🇷</b>\n\n'
-        for linha in linhas:
-            classificacao = linha.find('span').text.strip()
-            nome_time = linha.find('span', class_='hide__s').text.strip()
-
-            dados_time = linha.find_all('td')
-            pontos = dados_time[1].text.strip()
-            jogos = dados_time[2].text.strip()
-            vitorias = dados_time[3].text.strip()
-            empates = dados_time[4].text.strip()
-            derrotas = dados_time[5].text.strip()
-            saldo_gols = dados_time[8].text.strip()
-
-            table_row = (
-                f'🏆 {classificacao} - <b>{nome_time}</b>\n'
-                f'Pontos: {pontos} pts\n'
-                f'Jogos: {jogos}\n'
-                f'V: {vitorias} E: {empates} D: {derrotas}\n'
-                f'Saldo de Gols: {saldo_gols}\n'
-                f"{'━━━━━━━━━━━━━━━━━━'}\n\n"
-            )
-            message += table_row
-
-        bot.send_message(CHANNEL, message, parse_mode='HTML')
-        logger.info('Mensagem da tabela enviada com sucesso para o Telegram.')
-
-    except Exception as e:
-        logger.error(
-            f'Erro ao enviar a mensagem da tabela para o Telegram: {str(e)}'
-        )
-
 
 def placar_de_jogo():
     url = 'https://www.placardefutebol.com.br/jogos-de-hoje'
@@ -331,24 +286,14 @@ def placar_de_jogo():
             for link_jogo in links_jogos:
                 link = link_jogo['href']
                 if '/brasileirao-serie-a/' in link:
-                    status = link_jogo.find(
-                        'span', class_='status-name'
-                    ).text.strip()
+                    status = link_jogo.find('span', class_='status-name').text.strip()
 
-                    team_home = link_jogo.find_all('h5', class_='team_link')[
-                        0
-                    ].text.strip()
-                    team_away = link_jogo.find_all('h5', class_='team_link')[
-                        1
-                    ].text.strip()
+                    team_home = link_jogo.find_all('h5', class_='team_link')[0].text.strip()
+                    team_away = link_jogo.find_all('h5', class_='team_link')[1].text.strip()
 
                     if 'Encerrado' in status:
-                        score_home = container.find_all(
-                            'div', class_='match-score'
-                        )[0].text.strip()
-                        score_away = container.find_all(
-                            'div', class_='match-score'
-                        )[1].text.strip()
+                        score_home = container.find_all('div', class_='match-score')[0].text.strip()
+                        score_away = container.find_all('div', class_='match-score')[1].text.strip()
                         jogo = {
                             'Time da Casa': team_home,
                             'Placar Casa': score_home,
@@ -375,7 +320,11 @@ def placar_de_jogo():
 
             bot.send_message(CHANNEL, mensagem)
         else:
+            # Se não houver jogos, envie uma mensagem apropriada
+            bot.send_message(CHANNEL, "⚽️ <b>Não temos jogos hoje.</b>")
             print("Nenhum jogo encontrado")
+    else:
+        print(f"Erro ao acessar a página: {response.status_code}")
 
 
 def check_news_and_send():
@@ -508,112 +457,6 @@ def send_to_bot(title, image_url, date, author, link):
             logger.error("Falha ao redimensionar imagem.")
     except Exception as e:
         logger.info(f'Request Exception: {e}')
-
-
-def artilheiro_py():
-    try:
-        url = 'https://www.lance.com.br/tabela/brasileirao'
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-
-            artilheiros = soup.find_all(class_='styles_infoItem__oVN6c')[:10]
-
-            message = '<b>Artilheiros do Brasileirão</b>\n\n'
-
-            for artilheiro in artilheiros:
-                posicao = artilheiro.find(
-                    class_='styles_infoPos__hzOKU').text.strip()
-                nome_time = artilheiro.find(title=True)['title']
-                nome_jogador = artilheiro.find(
-                    class_='styles_playerName__iZPeZ').text.strip()
-                posicao_jogador = artilheiro.find(
-                    class_='styles_playerPosition__T9BX1').text.strip()
-                jogos = artilheiro.find_all('span')[0].text.strip()
-                media = artilheiro.find_all('span')[1].text.strip()
-                gols = artilheiro.find('p').text.strip()
-
-                message += f'<b>Posição:</b> {posicao}\n'
-                message += f'<b>Time:</b> {nome_time}\n'
-                message += f'<b>Jogador:</b> {nome_jogador}\n'
-                message += f'<b>Posição:</b> {posicao_jogador}\n'
-                message += f'<b>Jogos:</b> {jogos}\n'
-                message += f'<b>Média:</b> {media}\n'
-                message += f'<b>Gols:</b> {gols}\n'
-                message += '-' * 30 + '\n'
-
-            send_artilheiro(message)
-        else:
-            logger.info('Falha ao obter a página')
-    except requests.RequestException as e:
-        logger.info(f'Request Exception: {e}')
-
-
-def send_artilheiro(message):
-    try:
-        bot.send_message(CHANNEL, message)
-        sleep(1800)
-    except Exception as e:
-        logger.info(f'Request Exception: {e}')
-
-
-def assistencia():
-    try:
-        url = 'https://www.lance.com.br/tabela/brasileirao'
-        response = requests.get(url)
-
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.content, 'html.parser')
-
-            info_items = soup.find_all(
-                'div', class_='styles_infoItem__oVN6c')[:10]
-
-            message = '<b>Assistências do Brasileirão</b>\n\n'
-
-            for item in info_items:
-                ranking = item.find(
-                    'div', class_='styles_infoPos__hzOKU').text.strip()
-                team_name = item.find('img')['title']
-                player_name = item.find(
-                    'span', class_='styles_playerName__iZPeZ').text
-                position = item.find(
-                    'span', class_='styles_playerPosition__T9BX1').text
-                games = item.find_all('span')[0].text
-                average = item.find_all('span')[1].text
-                goals = item.find('p').text
-
-                message += f'<b>Posição:</b> {ranking}\n'
-                message += f'<b>Time:</b> {team_name}\n'
-                message += f'<b>Jogador:</b> {player_name}\n'
-                message += f'<b>Posição:</b> {position}\n'
-                message += f'<b>Jogos:</b> {games}\n'
-                message += f'<b>Média:</b> {average}\n'
-                message += f'<b>Assistências:</b> {goals}\n'
-                message += '-' * 30 + '\n'
-
-            send_assistencia(message)
-        else:
-            logger.info('Falha ao obter a página')
-    except requests.RequestException as e:
-        logger.info(f'Request Exception: {e}')
-
-
-def send_assistencia(message):
-    try:
-        max_message_length = 4096
-
-        if len(message) <= max_message_length:
-            bot.send_message(CHANNEL, message)
-        else:
-            parts = [message[i:i + max_message_length]
-                     for i in range(0, len(message), max_message_length)]
-            for part in parts:
-                bot.send_message(CHANNEL, part)
-                sleep(1)
-    except Exception as e:
-        logger.info(f'Request Exception: {e}')
-
 
 def ultimos_jogos():
     try:
@@ -882,6 +725,80 @@ def send_message_to_channel(message):
     except Exception as e:
         logger.error(f'Falha ao enviar mensagem para o canal: {e}')
 
+def send_images_to_telegram():
+    nome_arquivo_artilheiros, nome_arquivo_assistencias = news.artilheiro.main()  # Chama a função que gera as imagens
+
+    if nome_arquivo_artilheiros and nome_arquivo_assistencias:
+        # Enviar a imagem de artilheiros para o canal do Telegram
+        with open(nome_arquivo_artilheiros, 'rb') as artilheiros_img:
+            bot.send_photo(CHANNEL, artilheiros_img, caption="Imagem de Artilheiros")
+
+        # Enviar a imagem de assistências para o canal do Telegram
+        with open(nome_arquivo_assistencias, 'rb') as assistencias_img:
+            bot.send_photo(CHANNEL, assistencias_img, caption="Imagem de Assistências")
+
+        # Deletar as imagens após o envio
+        os.remove(nome_arquivo_artilheiros)
+        os.remove(nome_arquivo_assistencias)
+    else:
+        logger.error("Não foi possível gerar as imagens.")
+
+# Função para enviar a imagem de artilheiros
+def send_artilheiros():
+    nome_arquivo_artilheiros, _ = news.artilheiro.main()  # Chama a função que gera a imagem de artilheiros
+
+    if nome_arquivo_artilheiros:
+        with open(nome_arquivo_artilheiros, 'rb') as artilheiros_img:
+            caption_artilheiros = """
+            <b>🎯 Detalhe dos Artilheiros Brasileiros 2024</b>\n
+            ⚽ Confira os principais artilheiros do campeonato! \n
+            <i>As estatísticas e desempenho estão atualizados.</i>\n\n
+            <blockquote>Acesse mais em @fut_br</blockquote>
+            """
+            bot.send_photo(CHANNEL, artilheiros_img, caption=caption_artilheiros, parse_mode='HTML')
+
+        # Deletar a imagem após o envio
+        os.remove(nome_arquivo_artilheiros)
+    else:
+        logger.error("Não foi possível gerar a imagem dos artilheiros.")
+
+# Função para enviar a imagem de assistências
+def send_assistencias():
+    _, nome_arquivo_assistencias = news.artilheiro.main()  # Chama a função que gera a imagem de assistências
+
+    if nome_arquivo_assistencias:
+        with open(nome_arquivo_assistencias, 'rb') as assistencias_img:
+            caption_assistencias = """
+            <b>🅰️ Detalhe das Assistências Brasileiras 2024</b>\n
+            🎉 Veja quem são os maiores assistentes do campeonato! \n
+            <i>Fique por dentro dos melhores desempenhos.</i>\n\n
+            <blockquote>Acesse mais em @fut_br</blockquote>
+            """
+            bot.send_photo(CHANNEL, assistencias_img, caption=caption_assistencias, parse_mode='HTML')
+
+        # Deletar a imagem após o envio
+        os.remove(nome_arquivo_assistencias)
+    else:
+        logger.error("Não foi possível gerar a imagem das assistências.")
+
+def send_tabela():
+    _, nome_arquivo_recortado = news.tabela.fut_brasileirao()  # Chama a função que gera a imagem da tabela
+
+    if nome_arquivo_recortado:
+        with open(nome_arquivo_recortado, 'rb') as tabela_img:
+            caption_tabela = """
+            <b>⚽️ Tabela do Campeonato Brasileiro 2024</b>\n
+            📊 Confira a classificação atualizada do campeonato!\n
+            <i>Fique por dentro dos detalhes das equipes e suas performances.</i>\n\n
+            <blockquote>Acesse mais em @fut_br</blockquote>
+            """
+            bot.send_photo(CHANNEL, tabela_img, caption=caption_tabela, parse_mode='HTML')
+
+        # Deletar a imagem após o envio
+        os.remove(nome_arquivo_recortado)
+    else:
+        logger.error("Não foi possível gerar a imagem da tabela.")
+
 
 def schedule_tasks():
     schedule.every(1).minutes.do(check_match_status)
@@ -893,9 +810,9 @@ def schedule_tasks():
     schedule.every(15).minutes.do(fora_do_campo)
     schedule.every(15).minutes.do(ultimos_jogos)
     schedule.every(6).hours.do(placar_de_jogo)
-    schedule.every().day.at('22:15').do(send_table_message)
-    schedule.every().day.at('15:15').do(assistencia)
-    schedule.every().day.at('20:10').do(artilheiro_py)
+    schedule.every().day.at('08:00').do(send_artilheiros)
+    schedule.every().day.at('14:00').do(send_assistencias)
+    schedule.every(6).hours.do(send_tabela)
     schedule.every().day.at('00:00').do(delete_news)
     schedule.every().day.at('23:58').do(total_news)
 
