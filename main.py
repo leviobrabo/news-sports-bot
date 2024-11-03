@@ -803,9 +803,9 @@ def send_tabela():
 def schedule_tasks():
     schedule.every(1).minutes.do(check_match_status)
     schedule.every(1).minute.do(status_gol)
-    schedule.every(15).minutes.do(send_news_g1)
-    schedule.every(15).minutes.do(check_news_and_send)
-    schedule.every(15).minutes.do(scrape_website)
+    schedule.every(4).hours.do(send_news_g1)
+    schedule.every(6).hours.do(check_news_and_send)
+    schedule.every(6).hours.do(scrape_website)
     schedule.every(15).minutes.do(libertadores)
     schedule.every(15).minutes.do(fora_do_campo)
     schedule.every(15).minutes.do(ultimos_jogos)
